@@ -15,6 +15,58 @@
 
   console.log("PythonTutor paste wrapper script loaded");
 
+  const importMap = {
+    bisect: ["insort", "bisect_left", "bisect_right"],
+    collections: ["Counter", "deque", "defaultdict", "OrderedDict"],
+    functools: ["lru_cache", "cache", "reduce"],
+    itertools: [
+      "permutations",
+      "combinations",
+      "product",
+      "accumulate",
+      "groupby",
+    ],
+    typing: ["List", "Optional", "Dict", "Tuple", "Set"],
+    heapq: ["heappush", "heappop", "heapify", "nlargest", "nsmallest"],
+    math: ["ceil", "floor", "sqrt", "gcd", "lcm", "inf"],
+    random: ["randint", "random", "choice"],
+    re: ["match", "search", "findall", "sub"],
+    string: ["ascii_lowercase", "ascii_uppercase", "digits"],
+  };
+
+  const getImports = (code) => {
+    const existingImports = new Set();
+    const lines = code.split("\n");
+
+    lines.forEach((line) => {
+      const match = line.match(/^\s*(?:from|import)\s+([a-zA-Z0-9_]+)/);
+      if (match) existingImports.add(match[1]);
+    });
+
+    let result = "";
+
+    Object.entries(importMap).forEach(([module, symbols]) => {
+      if (existingImports.has(module)) return;
+
+      const moduleUsage = new RegExp(`\\b${module}\\.`).test(code);
+
+      if (moduleUsage) {
+        result += `import ${module}\n`;
+        return;
+      }
+
+      const used = symbols.filter((symbol) =>
+        new RegExp(`\\b${symbol}\\b`).test(code),
+      );
+
+      if (used.length > 0) {
+        result += `from ${module} import ${used.join(", ")}\n`;
+      }
+    });
+
+    return result ? result + "\n" : "";
+  };
+
   const transformCode = (pasted) => {
     const raw = pasted.trim();
     if (!raw) return raw;
@@ -32,9 +84,7 @@
     if (className && funcNames.length > 0) {
       let out = raw;
 
-      if (!/^\s*from\s+typing\s+import\s+List\b/m.test(out)) {
-        out = "from typing import Optional, List\n\n" + out;
-      }
+      out = getImports(out) + out;
 
       out += "\n\n";
       const Classtester = new RegExp(
