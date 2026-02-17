@@ -76,10 +76,23 @@
       ? classMatches[classMatches.length - 1][1]
       : null;
 
-    const funcMatches = [...raw.matchAll(/^\s{4}def\s+(\w+)\s*\(/gm)];
-    const funcNames = funcMatches
-      .map((m) => m[1])
-      .filter((name) => !name.startsWith("__"));
+    let classBlockMatch = null;
+
+    if (className) {
+      const startIndex = raw.indexOf(`class ${className}`);
+      if (startIndex !== -1) {
+        classBlockMatch = [raw.slice(startIndex)];
+      }
+    }
+
+    let funcNames = [];
+    if (classBlockMatch) {
+      const classBlock = classBlockMatch[0];
+      const funcMatches = [...classBlock.matchAll(/^\s{4}def\s+(\w+)\s*\(/gm)];
+      funcNames = funcMatches
+        .map((m) => m[1])
+        .filter((name) => !name.startsWith("__"));
+    }
 
     if (className && funcNames.length > 0) {
       let out = raw;
