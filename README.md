@@ -1,2 +1,10 @@
 # WebOverrides
-A collection of custom Tampermonkey userscripts that enhance, automate, and optimize everyday web workflows. Scripts are organized by platform and designed for performance, simplicity, and practical use.
+
+Small client-side overrides for websites that don’t behave the way they should.
+
+A personal collection of Tampermonkey userscripts I use to reduce friction,
+automate repetitive actions, and adjust UI behavior to my workflow.
+
+> Built for daily use. No framework. No overengineering.
+
+More overrides added as needed.
