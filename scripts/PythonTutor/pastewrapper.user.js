@@ -1,0 +1,105 @@
+// ==UserScript==
+// @name         PythonTutor paste wrapper
+// @namespace    http://tampermonkey.net/
+// @version      2025-09-04
+// @description  auto-paste leetcode wrapper
+// @author       Hunter
+// @match        https://pythontutor.com/render.html
+// @match        https://pythontutor.com/visualize.html
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=pythontutor.com
+// @grant        none
+// ==/UserScript==
+
+(function () {
+  "use strict";
+
+  console.log("PythonTutor paste wrapper script loaded");
+
+  const transformCode = (pasted) => {
+    const raw = pasted.trim();
+    if (!raw) return raw;
+
+    const classMatches = [...raw.matchAll(/^\s*class\s+(\w+)/gm)];
+    const className = classMatches.length
+      ? classMatches[classMatches.length - 1][1]
+      : null;
+
+    const funcMatches = [...raw.matchAll(/^\s{4}def\s+(\w+)\s*\(/gm)];
+    const funcNames = funcMatches
+      .map((m) => m[1])
+      .filter((name) => !name.startsWith("__"));
+
+    if (className && funcNames.length > 0) {
+      let out = raw;
+
+      if (!/^\s*from\s+typing\s+import\s+List\b/m.test(out)) {
+        out = "from typing import Optional, List\n\n" + out;
+      }
+
+      out += "\n\n";
+      const Classtester = new RegExp(
+        `^\\s*h\\s*=\\s*${className}\\s*\\(\\s*\\)`,
+        "m",
+      );
+
+      if (Classtester.test(out)) {
+        return out;
+      }
+
+      let calls = `h = ${className}()\n`;
+      funcNames.forEach((fn) => {
+        calls += `print(h.${fn}())\n`;
+      });
+
+      return out + calls.trimEnd();
+    }
+
+    return raw;
+  };
+
+  const attachPasteHandler = () => {
+    const aceInput = document.querySelector(".ace_text-input");
+    if (!aceInput || !window.ace) {
+      console.log("Waiting for the Editor...");
+      return false;
+    }
+
+    console.log("Found input field");
+
+    const editor = ace.edit(document.querySelector(".ace_editor"));
+
+    aceInput.addEventListener("paste", (e) => {
+      const data = e.clipboardData;
+      if (!data) return;
+
+      const text = data.getData("text");
+      if (!text) return;
+
+      console.log("Paste detected:");
+
+      const wrapped = transformCode(text);
+
+      if (wrapped === text.trim()) {
+        console.log("Allowing normal paste");
+        return;
+      }
+
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
+      editor.setValue(wrapped, -1);
+      editor.focus();
+
+      console.log("Wrapped code injected");
+    });
+
+    return true;
+  };
+
+  if (!attachPasteHandler()) {
+    const obs = new MutationObserver(() => {
+      if (attachPasteHandler()) obs.disconnect();
+    });
+    obs.observe(document.body, { childList: true, subtree: true });
+  }
+})();
